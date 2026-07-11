@@ -1,5 +1,6 @@
 type
   ptbtChar = ^tbtchar;
+  ptbtAnsiChar = ^tbtAnsiChar;
   PtbtPChar = ^tbtPChar;
   ptbtWideChar = ^tbtwidechar;
   ptbtString = ^TbtString;
@@ -19,12 +20,15 @@ type
     DataString: TArray<TArray<tbtString>>;
     DataPointer: TArray<TArray<Pointer>>;
     DataPChar: TArray<TArray<tbtPChar>>;
+    DataPAnsiChar: TArray<TArray<PAnsiChar>>;
+    DataPWideChar: TArray<TArray<PWideChar>>;
     DataVariant: TArray<TArray<Variant>>;
     {$IFNDEF PS_NOINT64}
     DataS64: TArray<TArray<Int64>>;
     DataU64: TArray<TArray<UInt64>>;
     {$ENDIF}
     DataChar: TArray<TArray<tbtChar>>;
+    DataAnsiChar: TArray<TArray<tbtAnsiChar>>;
     {$IFNDEF PS_NOWIDESTRING}
     DataWideString: TArray<TArray<tbtWideString>>;
     DataWideChar: TArray<TArray<tbtWideChar>>;
@@ -67,6 +71,14 @@ begin
       btExtended:                        aValues := aValues + [TValue.From<Extended>(PExtended(aValue^.dta)^)];
       //10
       btString:                          aValues := aValues + [TValue.From<TbtString>(pTbtString(aValue^.dta)^)];
+      //32
+      btAnsiString:                     aValues := aValues + [TValue.From<AnsiString>(PAnsiString(aValue^.dta)^)];
+      //31
+      btAnsiChar:                       aValues := aValues + [TValue.From<AnsiChar>(PAnsiChar(aValue^.dta)^)];
+      //33 - nil is passed as pointer to #0, matching the asm paths
+      btPAnsiChar:                      if Pointer(aValue^.dta^) = nil
+                                        then aValues := aValues + [TValue.From<PAnsiChar>(PAnsiChar(''))]
+                                        else aValues := aValues + [TValue.From<PAnsiChar>(PPAnsiChar(aValue^.dta)^)];
       //11
       btRecord:                          aValues := aValues + [TValue.From<Pointer>(aValue^.dta)];
       //12
@@ -161,6 +173,26 @@ begin
                  aValues := aValues + [TValue.From<Pointer>(@aOpenArrayData^.DataPChar[High(aOpenArrayData^.DataPChar)][0])];
                  aValues := aValues + [TValue.From<NativeInt>(l_high)];
                end;
+               btPAnsiChar: begin
+                 aOpenArrayData^.DataPAnsiChar := aOpenArrayData^.DataPAnsiChar + [[]];
+                 SetLength(aOpenArrayData^.DataPAnsiChar[High(aOpenArrayData^.DataPAnsiChar)], l_high + 1);
+                 for i := 0 to l_high do begin
+                   elemIFC := PSGetArrayField(aValue^, i);
+                   aOpenArrayData^.DataPAnsiChar[High(aOpenArrayData^.DataPAnsiChar)][i] := PPAnsiChar(elemIFC.Dta)^;
+                 end;
+                 aValues := aValues + [TValue.From<Pointer>(@aOpenArrayData^.DataPAnsiChar[High(aOpenArrayData^.DataPAnsiChar)][0])];
+                 aValues := aValues + [TValue.From<NativeInt>(l_high)];
+               end;
+               btPWideChar: begin
+                 aOpenArrayData^.DataPWideChar := aOpenArrayData^.DataPWideChar + [[]];
+                 SetLength(aOpenArrayData^.DataPWideChar[High(aOpenArrayData^.DataPWideChar)], l_high + 1);
+                 for i := 0 to l_high do begin
+                   elemIFC := PSGetArrayField(aValue^, i);
+                   aOpenArrayData^.DataPWideChar[High(aOpenArrayData^.DataPWideChar)][i] := PPWideChar(elemIFC.Dta)^;
+                 end;
+                 aValues := aValues + [TValue.From<Pointer>(@aOpenArrayData^.DataPWideChar[High(aOpenArrayData^.DataPWideChar)][0])];
+                 aValues := aValues + [TValue.From<NativeInt>(l_high)];
+               end;
                btVariant, btNotificationVariant: begin
                  //For array of variant we need IntPIFVariantToVariant to get actual Variant values
                  aOpenArrayData^.DataVariant := aOpenArrayData^.DataVariant + [[]];
@@ -205,6 +237,16 @@ begin
                    aOpenArrayData^.DataChar[High(aOpenArrayData^.DataChar)][i] := ptbtChar(elemIFC.Dta)^;
                  end;
                  aValues := aValues + [TValue.From<Pointer>(@aOpenArrayData^.DataChar[High(aOpenArrayData^.DataChar)][0])];
+                 aValues := aValues + [TValue.From<NativeInt>(l_high)];
+               end;
+               btAnsiChar: begin
+                 aOpenArrayData^.DataAnsiChar := aOpenArrayData^.DataAnsiChar + [[]];
+                 SetLength(aOpenArrayData^.DataAnsiChar[High(aOpenArrayData^.DataAnsiChar)], l_high + 1);
+                 for i := 0 to l_high do begin
+                   elemIFC := PSGetArrayField(aValue^, i);
+                   aOpenArrayData^.DataAnsiChar[High(aOpenArrayData^.DataAnsiChar)][i] := ptbtAnsiChar(elemIFC.Dta)^;
+                 end;
+                 aValues := aValues + [TValue.From<Pointer>(@aOpenArrayData^.DataAnsiChar[High(aOpenArrayData^.DataAnsiChar)][0])];
                  aValues := aValues + [TValue.From<NativeInt>(l_high)];
                end;
                {$IFNDEF PS_NOWIDESTRING}
@@ -314,6 +356,11 @@ begin
       btWideString:                      aValues := aValues + [TValue.From<tbtWideString>(ptbtWideString(aValue^.dta)^)];
       //20
       btWideChar:                        aValues := aValues + [TValue.From<tbtWideChar>(ptbtWideChar(aValue^.dta)^)];
+      //30
+      // nil is passed as pointer to #0, matching the asm paths (EmptyPchar in x86.inc/x64.inc)
+      btPWideChar:                      if Pointer(aValue^.dta^) = nil
+                                        then aValues := aValues + [TValue.From<PWideChar>(PWideChar(''))]
+                                        else aValues := aValues + [TValue.From<PWideChar>(pPWideChar(aValue^.dta)^)];
       {$ENDIF}
       //21
       btProcPtr:
@@ -388,6 +435,7 @@ var SysCalConv : TCallConv;
     RttiType : TRttiType;
     ResValue : TValue;
     ArrTypeInfo: PTypeInfo;
+    BorrowList: TPSPCharBorrowList;
 begin
   Result := False;
   IsStatic := _Self = nil;
@@ -420,11 +468,17 @@ begin
     if fvar.varparam then
     begin { var param }
       case fvar.aType.BaseType of
-        btArray, btVariant, btSet, btStaticArray, btRecord, btInterface, btClass, {$IFNDEF PS_NOWIDESTRING} btWideString, btWideChar, {$ENDIF}
+        btArray, btVariant, btSet, btStaticArray, btRecord, btInterface, btClass, {$IFNDEF PS_NOWIDESTRING} btWideString, btWideChar, btPWideChar, {$ENDIF}
+        btAnsiString, btAnsiChar, btPAnsiChar,
         btU8, btS8, btU16, btS16, btU32, btS32, btSingle, btDouble, btExtended, btString, btPChar, btChar, btCurrency,
         btUnicodeString
         {$IFNDEF PS_NOINT64}, bts64, btU64{$ENDIF}:
-          Arg := TValue.From<Pointer>( Pointer(fvar.dta) );
+          begin
+            // the callee may overwrite P-Char slots (directly or inside
+            // records/static arrays); borrow their ownership around the call
+            PSBorrowPCharOwnership(fvar.aType, fvar.dta, BorrowList);
+            Arg := TValue.From<Pointer>( Pointer(fvar.dta) );
+          end;
         else
           begin
             Exit;
@@ -445,6 +499,7 @@ begin
   {$ENDIF CPUX86}
 
   IsConstr := (Integer(CallingConv) and 64) <> 0;
+  try
   if not assigned(res) then
   begin
     Invoke(Address, Args, SysCalConv, nil);  { ignore return }
@@ -465,6 +520,9 @@ begin
       btExtended:              PExtended(res.dta)^ := Extended(Invoke(Address,Args,SysCalConv,TypeInfo(Extended),IsStatic).AsExtended);
       //10
       btString:                tbtString(res.dta^) := tbtString(Invoke(Address,Args,SysCalConv,TypeInfo(tbtString),IsStatic).AsString);
+      btAnsiString:            AnsiString(res.dta^) := AnsiString(Invoke(Address,Args,SysCalConv,TypeInfo(AnsiString),IsStatic).AsType<AnsiString>());
+      btAnsiChar:              PAnsiChar(res.dta)^ := AnsiChar(Invoke(Address,Args,SysCalConv,TypeInfo(AnsiChar),IsStatic).AsType<AnsiChar>());
+      btPAnsiChar:             TbtAnsiString(res.dta^) := TbtAnsiString(PAnsiChar(Invoke(Address,Args,SysCalConv,TypeInfo(PAnsiChar),IsStatic).AsType<PAnsiChar>()));
       {$IFNDEF FPC}
       //11
       btRecord:
@@ -557,6 +615,13 @@ begin
         {$ELSE}
           ptbtWideChar(res.dta)^ := tbtWideChar(Invoke(Address,Args,SysCalConv,TypeInfo(tbtWideChar),IsStatic).AsType<tbtWideChar>());
         {$ENDIF}
+      //30
+      btPWideChar:
+        {$IFDEF FPC}
+          tbtunicodestring(res.dta^) := tbtunicodestring(PWideChar(Invoke(Address,Args,SysCalConv,TypeInfo(PWideChar),IsStatic).AsOrdinal));
+        {$ELSE}
+          tbtunicodestring(res.dta^) := tbtunicodestring(PWideChar(Invoke(Address,Args,SysCalConv,TypeInfo(PWideChar),IsStatic).AsType<PWideChar>()));
+        {$ENDIF}
       {$ENDIF}
       //21
       btProcPtr:
@@ -634,6 +699,9 @@ begin
         Exit;
     end;  { case }
   end; //assigned(res)
+  finally
+    PSReownPCharOwnership(BorrowList);
+  end;
   SetLength(Args, 0);
   SetLength(old_Args, 0);
   SetLength(old_Args2, 0);
