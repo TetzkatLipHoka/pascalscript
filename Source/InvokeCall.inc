@@ -53,6 +53,7 @@ var
   methodValue: TValue;
   rttiType: TRttiType;
   elemIFC: TPSVariantIFC;
+  elemTypes: TArray<TPSBaseType>;
 begin
   Result := Assigned(aValue^.aType) and (IPointer(aValue^.aType) > $FFFF);
   if Result then
@@ -314,8 +315,10 @@ begin
                btPointer: begin
                  //For array of const we need TValueArrayToArrayOfConst to get a TVarRec array
                  SetLength(arr, 0);
+                 SetLength(elemTypes, l_high + 1);
                  for i := 0 to l_high do begin
                    elemIFC := PSGetArrayField(aValue^, i);
+                   elemTypes[i] := elemIFC.aType.BaseType;
                    if not PSVariantIFCToTValue(@elemIFC, arr, aValues1, aValues2, aOpenArrayData, aSelf) then begin
                      Result := False;
                      Exit;
@@ -323,6 +326,22 @@ begin
                  end;
                  aValues1 := aValues1 + arr;
                  arr_varrec := TValueArrayToArrayOfConst(arr);
+                 { TValueArrayToArrayOfConst turns p-char TValues into plain
+                   vtPointer entries; consumers like Format need the proper
+                   p-char VTypes (the data slot is shared, only VType differs) }
+                 for i := 0 to High(arr_varrec) do
+                   case elemTypes[i] of
+                     btPChar:
+                       {$if SizeOf(TbtChar) = 2}
+                       arr_varrec[i].VType := vtPWideChar;
+                       {$else}
+                       arr_varrec[i].VType := vtPChar;
+                       {$ifend}
+                     btPAnsiChar: arr_varrec[i].VType := vtPChar;
+                     {$IFNDEF PS_NOWIDESTRING}
+                     btPWideChar: arr_varrec[i].VType := vtPWideChar;
+                     {$ENDIF}
+                   end;
                  aValues2 := aValues2 + arr_varrec;
                  aValues := aValues + [TValue.From<Pointer>(@arr_varrec[0])];
                  aValues := aValues + [TValue.From<NativeInt>(l_high)];
