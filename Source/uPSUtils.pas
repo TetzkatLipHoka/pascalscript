@@ -23,6 +23,15 @@ const
 
   PSAddrNegativeStackStart = 1073741824;
 type
+  { PS_NATIVESTRINGS: tbtChar/tbtPChar/tbtString follow the host compiler's
+    native types (Unicode on Delphi 2009+). Host functions registered with
+    tbtString/tbtChar parameters then match the width the engine passes.
+    Without the define everything stays exactly as before. }
+  {$IFDEF PS_NATIVESTRINGS}
+  tbtString = {$IFDEF FPC}type {$ENDIF}string;
+  tbtPChar  = PChar;
+  tbtChar   = Char;
+  {$ELSE !PS_NATIVESTRINGS}
   {$IFDEF FPC}
     {$IFDEF FPC_UNICODE}
     tbtString = AnsiString;
@@ -38,6 +47,13 @@ type
   tbtPChar  = {$IFDEF DELPHI2009UP}PAnsiChar{$ELSE}PChar{$ENDIF};
   tbtChar   = {$IFDEF DELPHI4UP}AnsiChar{$ELSE}CHAR{$ENDIF};
   {$ENDIF}
+  {$ENDIF !PS_NATIVESTRINGS}
+
+  { always-Ansi companions, independent of PS_NATIVESTRINGS; used by the
+    btAnsiChar/btAnsiString/btPAnsiChar base types and for byte buffers }
+  tbtAnsiChar = {$IFDEF DELPHI4UP}AnsiChar{$ELSE}Char{$ENDIF};
+  tbtAnsiString = AnsiString;
+  tbtPAnsiChar = PAnsiChar;
 
   TPSBaseType = Byte;
 
@@ -110,6 +126,15 @@ const
 {$IFNDEF PS_NOINT64}
   btU64             = 29;
 {$ENDIF}
+
+  btPWideChar       = 30;
+
+  { always-Ansi base types: with PS_NATIVESTRINGS the btChar/btString/btPChar
+    base types follow the compiler's native (wide) types, so the script types
+    AnsiChar/AnsiString/PAnsiChar need their own base types }
+  btAnsiChar        = 31;
+  btAnsiString      = 32;
+  btPAnsiChar       = 33;
 
   btType = 130;
 
