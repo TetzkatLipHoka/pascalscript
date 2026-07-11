@@ -741,7 +741,7 @@ type
     function RunScript: Boolean;
 
 
-    function LoadData(const s: tbtstring): Boolean; virtual;
+    function LoadData(const s: tbtAnsiString): Boolean; virtual;
 
     procedure Clear; Virtual;
 
@@ -2793,7 +2793,7 @@ begin
   Result := P;
 end;
 
-function TPSExec.LoadData(const s: tbtString): Boolean;
+function TPSExec.LoadData(const s: tbtAnsiString): Boolean;
 var
   HDR: TPSHeader;
   Pos: Cardinal;

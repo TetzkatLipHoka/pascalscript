@@ -7,7 +7,7 @@ interface
 uses
   uPSRuntime, uPSUtils, sysutils;
 
-function IFPS3DataToText(const Input: tbtstring; var Output: string): Boolean;
+function IFPS3DataToText(const Input: tbtAnsiString; var Output: string): Boolean;
 implementation
 
 type
@@ -44,7 +44,7 @@ begin
 end;
 
 
-function IFPS3DataToText(const Input: tbtstring; var Output: string): Boolean;
+function IFPS3DataToText(const Input: tbtAnsiString; var Output: string): Boolean;
 var
   I: TMyPSExec;
 

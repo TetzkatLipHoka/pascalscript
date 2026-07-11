@@ -550,7 +550,7 @@ type
   TPSInternalProcedure = class(TPSProcedure)
   private
     FForwarded: Boolean;
-    FData: tbtString;
+    FData: tbtAnsiString; // compiled bytecode: always a byte string
     FNameHash: Longint;
     FName: tbtString;
     FDecl: TPSParametersDecl;
@@ -578,7 +578,7 @@ type
 
     property Forwarded: Boolean read FForwarded write FForwarded;
 
-    property Data: tbtString read FData write FData;
+    property Data: tbtAnsiString read FData write FData;
 
     property Decl: TPSParametersDecl read FDecl;
 
@@ -940,7 +940,7 @@ type
     FTypes: TPSList;
     FAttributeTypes: TPSList;
     FVars: TPSList;
-    FOutput: tbtString;
+    FOutput: tbtAnsiString; // compiled bytecode: always a byte string
     FParser: TPSPascalParser;
     FParserHadError: Boolean;
     FMessages: TPSList;
@@ -1189,7 +1189,7 @@ type
 
     function Compile(const s: tbtString): Boolean;
 
-    function GetOutput(var s: tbtString): Boolean;
+    function GetOutput(var s: tbtAnsiString): Boolean;
 	
     function GetDebugOutput(var s: tbtString): Boolean;
 
@@ -1782,6 +1782,7 @@ type
 
 
 function PS_mi2s(i: Cardinal): tbtString;
+function PS_mi2d(i: Cardinal): tbtAnsiString; // PS_mi2s for binary (byte string) buffers
 
 function ParseMethod(Owner: TPSPascalCompiler; const FClassName: tbtString; Decl: tbtString; var OrgName: tbtString; DestDecl: TPSParametersDecl; var Func: TPMFuncType): Boolean;
 function ParseMethodEx(Owner: TPSPascalCompiler; const FClassName: tbtString; Decl: tbtString; var OrgName: tbtString; DestDecl: TPSParametersDecl; var Func: TPMFuncType; CustomParser: TPSPascalParser): Boolean;
@@ -1906,7 +1907,7 @@ end;
 
 procedure BlockWriteByte(BlockInfo: TPSBlockInfo; b: Byte);
 begin
-  BlockInfo.Proc.Data := BlockInfo.Proc.Data + tbtChar(b);
+  BlockInfo.Proc.Data := BlockInfo.Proc.Data + tbtAnsiChar(b);
 end;
 
 procedure BlockWriteData(BlockInfo: TPSBlockInfo; const Data; Len: Longint);
@@ -2495,6 +2496,12 @@ type
   TFuncType = (ftProc, ftFunc);
 
 function PS_mi2s(i: Cardinal): tbtString;
+begin
+  SetLength(Result, 4);
+  Cardinal((@Result[1])^) := i;
+end;
+
+function PS_mi2d(i: Cardinal): tbtAnsiString;
 begin
   SetLength(Result, 4);
   Cardinal((@Result[1])^) := i;
@@ -5043,7 +5050,7 @@ begin
   for l := 0 to t.Count - 1 do
   begin
     v := t[l];
-    Func.Data := Func.Data  + chr(cm_pt)+ PS_mi2s(v.AType.FinalTypeNo);
+    Func.Data := Func.Data  + tbtAnsiChar(cm_pt)+ PS_mi2d(v.AType.FinalTypeNo);
   end;
 end;
 
@@ -12177,7 +12184,7 @@ var
 
     procedure WriteByte(b: Byte);
     begin
-      FOutput := FOutput + tbtChar(b);
+      FOutput := FOutput + tbtAnsiChar(b);
     end;
 
     procedure WriteData(const Data; Len: Longint);
@@ -12516,7 +12523,7 @@ var
         if x.ClassType = TPSInternalProcedure then
         begin
           if TPSInternalProcedure(x).Data = '' then
-            TPSInternalProcedure(x).Data := Chr(Cm_R);
+            TPSInternalProcedure(x).Data := tbtAnsiChar(Cm_R);
           L2 := Length(FOutput);
           Move(L2, FOutput[TPSInternalProcedure(x).OutputDeclPosition + 2], 4);
           // write position
@@ -12534,14 +12541,14 @@ var
     var
       l: Longint;
       Proc : TPSInternalProcedure;
-      ProcData : tbtString;
+      ProcData : tbtAnsiString; // bytecode buffer: must stay a byte string
       Calls : Integer;
 
       procedure WriteProc(const aData: Longint);
       var
         l: Longint;
       begin
-        ProcData := ProcData + Chr(cm_c);
+        ProcData := ProcData + tbtAnsiChar(cm_c);
         l := Length(ProcData);
         SetLength(ProcData, l + 4);
         Move(aData, ProcData[l + 1], 4);
@@ -12567,7 +12574,7 @@ var
       begin
         Proc := NewProc('Master proc', '!MASTERPROC');
         Result := FindProc('!MASTERPROC');
-        Proc.data := Procdata + Chr(cm_R);
+        Proc.data := Procdata + tbtAnsiChar(cm_R);
       end;
     end;
     {$ELSE}
@@ -13282,7 +13289,7 @@ begin
   inherited Destroy;
 end;
 
-function TPSPascalCompiler.GetOutput(var s: tbtString): Boolean;
+function TPSPascalCompiler.GetOutput(var s: tbtAnsiString): Boolean;
 begin
   if Length(FOutput) <> 0 then
   begin
@@ -15769,7 +15776,7 @@ begin
     pv := Proc.ProcVars[Proc.ProcVars.Count -1];
     Proc.ProcVars.Delete(Proc.ProcVars.Count -1);
     pv.Free;
-    Proc.Data := Proc.Data + tbtChar(CM_PO);
+    Proc.Data := Proc.Data + tbtAnsiChar(CM_PO);
   end;
   inherited Destroy;
 end;
