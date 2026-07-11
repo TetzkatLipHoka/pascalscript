@@ -615,7 +615,7 @@ type
   TPSPascalParser = class(TObject)
   protected
     FData: TbtString;
-    FText: {$IFDEF DELPHI4UP}PAnsiChar{$ELSE}PChar{$ENDIF};
+    FText: TbtPChar;
     FLastEnterPos, FRow, FRealPosition, FTokenLength: Cardinal;
     FTokenId: TPSPasToken;
     FToken: TbtString;
@@ -1117,7 +1117,7 @@ begin
   while I > 0 do
   begin
     C := Result[I];
-    if c in [#97..#122] then
+    if {$if declared(CharInSet)}CharInSet(c, [#97..#122]){$else}(c in [#97..#122]){$ifend} then
       Result[I] := tbtchar(Ord(Result[I]) -32);
     Dec(I);
   end;
@@ -1133,7 +1133,7 @@ begin
   while I > 0 do
   begin
     C := Result[I];
-    if C in [#65..#90] then
+    if {$if declared(CharInSet)}CharInSet(C, [#65..#90]){$else}(C in [#65..#90]){$ifend} then
       Result[I] := tbtchar(Ord(Result[I]) + 32);
     Dec(I);
   end;
@@ -1226,7 +1226,7 @@ procedure TPSPascalParser.Next;
 var
   Err: TPSParserErrorKind;
   FLastUpToken: TbtString;
-  function CheckReserved(Const S: ShortString; var CurrTokenId: TPSPasToken): Boolean;
+  function CheckReserved(Const S: TbtString; var CurrTokenId: TPSPasToken): Boolean;
   var
     L, H, I: LongInt;
     J: SmallInt;
@@ -1266,7 +1266,7 @@ var
     s: tbtString;
   begin
     SetLength(s, CurrTokenLen);
-    Move(FText[CurrTokenPos], S[1], CurrtokenLen);
+    Move(FText[CurrTokenPos], S[1], CurrtokenLen*SizeOf(TbtChar));
     Result := s;
   end;
 
@@ -1275,7 +1275,9 @@ var
   var
     ct, ci: Cardinal;
     hs: Boolean;
+    {$if SizeOf(TbtChar) <> 2}
     p: {$IFDEF DELPHI4UP}PAnsiChar{$ELSE}PChar{$ENDIF};
+    {$ifend}
   begin
     ParseToken := iNoError;
     ct := CurrTokenPos;
@@ -1288,12 +1290,20 @@ var
       'A'..'Z', 'a'..'z', '_':
         begin
           ci := ct + 1;
-          while (FText[ci] in ['_', '0'..'9', 'a'..'z', 'A'..'Z']) do begin
+          while {$if declared(CharInSet)}
+                CharInSet(FText[ci], ['_', '0'..'9', 'a'..'z', 'A'..'Z'])
+                {$else}
+                (FText[ci] in ['_', '0'..'9', 'a'..'z', 'A'..'Z'])
+                {$ifend}
+          do begin
             Inc(ci);
           end;
           CurrTokenLen := ci - ct;
 
           FLastUpToken := _GetToken(CurrTokenPos, CurrtokenLen);
+          {$if SizeOf(TbtChar) = 2}
+          FLastUpToken := UpperCase(FLastUpToken);
+          {$else}
           p := {$IFDEF DELPHI4UP}PAnsiChar{$ELSE}pchar{$ENDIF}(FLastUpToken);
           while p^<>#0 do
           begin
@@ -1301,6 +1311,7 @@ var
               Dec(Byte(p^), 32);
             inc(p);
           end;
+          {$ifend}
           if not CheckReserved(FLastUpToken, CurrTokenId) then
           begin
             CurrTokenId := CSTI_Identifier;
@@ -1310,7 +1321,11 @@ var
         begin
           ci := ct + 1;
 
-          while (FText[ci] in ['0'..'9', 'a'..'f', 'A'..'F'])
+          while {$if declared(CharInSet)}
+                CharInSet(FText[ci], ['0'..'9', 'a'..'f', 'A'..'F'])
+                {$else}
+                (FText[ci] in ['0'..'9', 'a'..'f', 'A'..'F'])
+                {$ifend}
             do Inc(ci);
 
           CurrTokenId := CSTI_HexInt;
@@ -1321,7 +1336,7 @@ var
         begin
           hs := False;
           ci := ct;
-          while (FText[ci] in ['0'..'9']) do
+          while {$if declared(CharInSet)}CharInSet(FText[ci], ['0'..'9']){$else}(FText[ci] in ['0'..'9']){$ifend} do
           begin
             Inc(ci);
             if (FText[ci] = '.') and (not hs) then
@@ -1331,16 +1346,21 @@ var
               Inc(ci);
             end;
           end;
-          if (FText[ci] in ['E','e']) and ((FText[ci+1] in ['0'..'9'])
+          if {$if declared(CharInSet)}
+             CharInSet(FText[ci], ['E','e']) and (CharInSet(FText[ci+1], ['0'..'9'])
+            or (CharInSet(FText[ci+1], ['+','-']) and CharInSet(FText[ci+2], ['0'..'9']))) then
+             {$else}
+             (FText[ci] in ['E','e']) and ((FText[ci+1] in ['0'..'9'])
             or ((FText[ci+1] in ['+','-']) and (FText[ci+2] in ['0'..'9']))) then
+             {$ifend}
           begin
             hs := True;
             Inc(ci);
-            if FText[ci] in ['+','-'] then
+            if {$if declared(CharInSet)}CharInSet(FText[ci], ['+','-']){$else}(FText[ci] in ['+','-']){$ifend} then
               Inc(ci);
             repeat
               Inc(ci);
-            until not (FText[ci] in ['0'..'9']);
+            until not {$if declared(CharInSet)}CharInSet(FText[ci], ['0'..'9']){$else}(FText[ci] in ['0'..'9']){$ifend};
           end;
 
           if hs
@@ -1381,7 +1401,12 @@ var
           if FText[ci] = '$' then
           begin
             inc(ci);
-            while (FText[ci] in ['A'..'F', 'a'..'f', '0'..'9']) do begin
+            while {$if declared(CharInSet)}
+                  CharInSet(FText[ci], ['A'..'F', 'a'..'f', '0'..'9'])
+                  {$else}
+                  (FText[ci] in ['A'..'F', 'a'..'f', '0'..'9'])
+                  {$ifend}
+            do begin
               Inc(ci);
             end;
             if ci = ct + 2 then
@@ -1390,10 +1415,10 @@ var
             CurrTokenLen := ci - ct;
           end else
           begin
-            while (FText[ci] in ['0'..'9']) do begin
+            while {$if declared(CharInSet)}CharInSet(FText[ci], ['0'..'9']){$else}(FText[ci] in ['0'..'9']){$ifend} do begin
               Inc(ci);
             end;
-            if (ci = ct + 1) or (FText[ci] in ['A'..'Z', 'a'..'z', '_']) then
+            if (ci = ct + 1) or {$if declared(CharInSet)}CharInSet(FText[ci], ['A'..'Z', 'a'..'z', '_']){$else}(FText[ci] in ['A'..'Z', 'a'..'z', '_']){$ifend} then
               ParseToken := iCharError;
             CurrTokenId := CSTI_Char;
             CurrTokenLen := ci - ct;
@@ -1565,7 +1590,7 @@ var
       #32, #9, #13, #10:
         begin
           ci := ct;
-          while (FText[ci] in [#32, #9, #13, #10]) do
+          while {$if declared(CharInSet)}CharInSet(FText[ci], [#32, #9, #13, #10]){$else}(FText[ci] in [#32, #9, #13, #10]){$ifend} do
           begin
             if FText[ci] = #13 then
             begin
@@ -1642,25 +1667,25 @@ begin
       CSTIINT_Comment: if not FEnableComments then Continue else
         begin
           SetLength(FOriginalToken, FTokenLength);
-          Move(FText[CurrTokenPos], FOriginalToken[1], FTokenLength);
+          Move(FText[CurrTokenPos], FOriginalToken[1], FTokenLength*SizeOf(TbtChar));
           FToken := FOriginalToken;
         end;
       CSTIINT_WhiteSpace: if not FEnableWhitespaces then Continue else
         begin
           SetLength(FOriginalToken, FTokenLength);
-          Move(FText[CurrTokenPos], FOriginalToken[1], FTokenLength);
+          Move(FText[CurrTokenPos], FOriginalToken[1], FTokenLength*SizeOf(TbtChar));
           FToken := FOriginalToken;
         end;
       CSTI_Integer, CSTI_Real, CSTI_String, CSTI_Char, CSTI_HexInt:
         begin
           SetLength(FOriginalToken, FTokenLength);
-          Move(FText[CurrTokenPos], FOriginalToken[1], FTokenLength);
+          Move(FText[CurrTokenPos], FOriginalToken[1], FTokenLength*SizeOf(TbtChar));
           FToken := FOriginalToken;
         end;
       CSTI_Identifier:
         begin
           SetLength(FOriginalToken, FTokenLength);
-          Move(FText[CurrTokenPos], FOriginalToken[1], FTokenLength);
+          Move(FText[CurrTokenPos], FOriginalToken[1], FTokenLength*SizeOf(TbtChar));
           FToken := FLastUpToken;
         end;
     else
