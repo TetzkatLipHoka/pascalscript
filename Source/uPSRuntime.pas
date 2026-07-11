@@ -2830,7 +2830,7 @@ var
         exit;
       end;
       SetLength(Name, NameLen);
-      if not Read(Name[1], NameLen) then
+      if not Read(Name[1], NameLen*SizeOf(tbtChar)) then
       begin
         CMD_Err(ErOutOfRange);
         Result := false;
@@ -2865,13 +2865,14 @@ var
                 exit;
               end;
             end;
-          bts8, btchar, btU8: if not read(PPSVariantU8(VarP)^.data, SizeOf(tbtu8)) then
+          bts8, btU8{$IF SizeOf(tbtChar) = 1}, btchar{$IFEND}: if not read(PPSVariantU8(VarP)^.data, SizeOf(tbtu8)) then
           begin
               CMD_Err(erOutOfRange);
               Result := False;
               exit;
             end;
-          bts16, {$IFNDEF PS_NOWIDESTRING}btwidechar,{$ENDIF} btU16: if not read(PPSVariantU16(Varp)^.Data, SizeOf(TbtU16)) then begin
+          bts16, {$IFNDEF PS_NOWIDESTRING}btwidechar,{$ENDIF}
+          {$IF SizeOf(tbtChar) = 2}btchar,{$IFEND} btU16: if not read(PPSVariantU16(Varp)^.Data, SizeOf(TbtU16)) then begin
               CMD_Err(ErOutOfRange);
               Result := False;
               exit;
@@ -2929,7 +2930,7 @@ var
                 exit;
               end;
               SetLength(PPSVariantAString(varp)^.Data, NameLen);
-              if not read(PPSVariantAString(varp)^.Data[1], NameLen) then begin
+              if not read(PPSVariantAString(varp)^.Data[1], NameLen*SizeOf(tbtChar)) then begin
                 CMD_Err(erOutOfRange);
                 Result := False;
                 exit;
@@ -3064,7 +3065,7 @@ var
               exit;
             end;
             setlength(TPSTypeRec_Class(Curr).FCN, d);
-            if not Read(TPSTypeRec_Class(Curr).FCN[1], d) then
+            if not Read(TPSTypeRec_Class(Curr).FCN[1], d*SizeOf(tbtChar)) then
             begin
               curr.Free;
               cmd_err(erUnexpectedEof);
@@ -3085,7 +3086,7 @@ var
               exit;
             end;
             setlength(TPSTypeRec_ProcPtr(Curr).FParamInfo, d);
-            if not Read(TPSTypeRec_ProcPtr(Curr).FParamInfo[1], d) then
+            if not Read(TPSTypeRec_ProcPtr(Curr).FParamInfo[1], d*SizeOf(tbtChar)) then
             begin
               curr.Free;
               cmd_err(erUnexpectedEof);
@@ -3257,7 +3258,7 @@ var
           exit;
         end;
         SetLength(Curr.FExportName, d);
-        if not read(Curr.fExportName[1], d) then
+        if not read(Curr.fExportName[1], d*SizeOf(tbtChar)) then
         begin
           cmd_err(erUnexpectedEof);
           LoadTypes := False;
@@ -3302,7 +3303,7 @@ var
           exit;
         end;
         SetLength(n, b);
-        if not read(n[1], b) then begin
+        if not read(n[1], b*SizeOf(tbtChar)) then begin
           Curr.Free;
           cmd_err(erUnexpectedEof);
           LoadProcs := False;
@@ -3319,7 +3320,7 @@ var
             exit;
           end;
           SetLength(n, L2);
-          Read(n[1], L2); // no check is needed
+          Read(n[1], L2*SizeOf(tbtChar)); // no check is needed
           TPSExternalProcRec(Curr).FDecl := n;
         end;
         if not ImportProc(TPSExternalProcRec(Curr).Name, TPSExternalProcRec(Curr)) then begin
@@ -3369,7 +3370,7 @@ var
             exit;
           end;
           SetLength(TPSInternalProcRec(Curr).FExportName, L3);
-          if not read(TPSInternalProcRec(Curr).FExportName[1], L3) then begin
+          if not read(TPSInternalProcRec(Curr).FExportName[1], L3*SizeOf(tbtChar)) then begin
             Curr.Free;
             cmd_err(erUnexpectedEof);
             LoadProcs := False;
@@ -3388,7 +3389,7 @@ var
             exit;
           end;
           SetLength(TPSInternalProcRec(Curr).FExportDecl, L3);
-          if not read(TPSInternalProcRec(Curr).FExportDecl[1], L3) then begin
+          if not read(TPSInternalProcRec(Curr).FExportDecl[1], L3*SizeOf(tbtChar)) then begin
             Curr.Free;
             cmd_err(erUnexpectedEof);
             LoadProcs := False;
@@ -3446,7 +3447,7 @@ var
         new(e);
         try
           SetLength(e^.FName, n);
-          if not Read(e^.FName[1], n) then
+          if not Read(e^.FName[1], n*SizeOf(tbtChar)) then
           begin
             dispose(e);
             cmd_err(erUnexpectedEof);
@@ -7404,7 +7405,7 @@ begin
                 exit;
               end;
             end;
-          bts8, btchar, btU8:
+          bts8, btU8{$IF SizeOf(tbtChar) = 1}, btchar{$IFEND}:
             begin
               if FCurrentPosition >= FDataLength then
               begin
@@ -7416,7 +7417,8 @@ begin
               tbtu8(dest.p^) := FData^[FCurrentPosition];
               Inc(FCurrentPosition);
             end;
-          bts16, {$IFNDEF PS_NOWIDESTRING}btwidechar,{$ENDIF} btU16:
+          bts16, {$IFNDEF PS_NOWIDESTRING}btwidechar,{$ENDIF}
+          {$IF SizeOf(tbtChar) = 2}btchar,{$IFEND} btU16:
             begin
               if FCurrentPosition + 1>= FDataLength then
               begin
@@ -7583,14 +7585,14 @@ begin
               Pointer(Dest.P^) := nil;
               SetLength(tbtstring(Dest.P^), Param);
               if Param <> 0 then begin
-              if not ReadData(tbtstring(Dest.P^)[1], Param) then
+              if not ReadData(tbtstring(Dest.P^)[1], Param*SizeOf(tbtChar)) then
               begin
                 CMD_Err(erOutOfRange);
                 FTempVars.Pop;
                 Result := False;
                 exit;
               end;
-                pansichar(dest.p^)[Param] := #0;
+                tbtpchar(dest.p^)[Param] := #0;
               end;
             end;
           {$IFNDEF PS_NOWIDESTRING}

@@ -1992,7 +1992,7 @@ begin
       {$ENDIF}
     end;
   btCurrency: BlockWriteData(BlockInfo, p^.tcurrency, sizeof(tbtCurrency));
-  btChar: BlockWriteData(BlockInfo, p^.tchar, 1);
+  btChar: BlockWriteData(BlockInfo, p^.tchar, SizeOf(tbtChar));
   btSet:
     begin
       BlockWriteData(BlockInfo, tbtString(p^.tstring)[1], Length(tbtString(p^.tstring)));
@@ -2001,7 +2001,7 @@ begin
     begin
       BlockWriteLong(BlockInfo, Length(tbtString(p^.tstring)));
       if Length(tbtString(p^.tstring)) > 0 then
-        BlockWriteData(BlockInfo, tbtString(p^.tstring)[1], Length(tbtString(p^.tstring)));
+        BlockWriteData(BlockInfo, tbtString(p^.tstring)[1], Length(tbtString(p^.tstring))*SizeOf(tbtChar));
     end;
      btenum:
      begin
@@ -12266,7 +12266,7 @@ var
           {$ENDIF}
         end;
       btCurrency: WriteData(p^.tcurrency, sizeof(tbtCurrency));
-      btChar: WriteData(p^.tchar, 1);
+      btChar: WriteData(p^.tchar, SizeOf(tbtChar));
       btSet:
         begin
           WriteData(tbtString(p^.tstring)[1], Length(tbtString(p^.tstring)));
@@ -12275,7 +12275,7 @@ var
         begin
           WriteLong(Length(tbtString(p^.tstring)));
           if Length(tbtString(p^.tstring)) > 0 then
-            WriteData(tbtString(p^.tstring)[1], Length(tbtString(p^.tstring)));
+            WriteData(tbtString(p^.tstring)[1], Length(tbtString(p^.tstring))*SizeOf(tbtChar));
         end;
       btenum:
         begin
@@ -12311,7 +12311,7 @@ var
       begin
         j := Length(attr[i].FAttribType.Name);
         WriteLong(j);
-        WriteData(Attr[i].FAttribType.Name[1], j);
+        WriteData(Attr[i].FAttribType.Name[1], j*SizeOf(tbtChar));
         WriteLong(Attr[i].Count);
         for j := 0 to Attr[i].Count -1 do
         begin
@@ -12384,13 +12384,13 @@ var
           end else {$ENDIF} if x.BaseType = btClass then
           begin
             WriteLong(Length(TPSClassType(X).Cl.FClassName));
-            WriteData(TPSClassType(X).Cl.FClassName[1], Length(TPSClassType(X).Cl.FClassName));
+            WriteData(TPSClassType(X).Cl.FClassName[1], Length(TPSClassType(X).Cl.FClassName)*SizeOf(tbtChar));
           end else
           if (x.BaseType = btProcPtr) then
           begin
             s := DeclToBits(TPSProceduralType(x).ProcDef);
             WriteLong(Length(s));
-            WriteData(s[1], Length(s));
+            WriteData(s[1], Length(s)*SizeOf(tbtChar));
           end else
           if (x.BaseType = btSet) then
           begin
@@ -12413,7 +12413,7 @@ var
           if FExportName <> '' then
           begin
             WriteLong(Length(FExportName));
-            WriteData(FExportName[1], length(FExportName));
+            WriteData(FExportName[1], length(FExportName)*SizeOf(tbtChar));
           end;
           if not WriteAttributes(x.Attributes) then begin
             Result := False;
@@ -12449,7 +12449,7 @@ var
         begin
           WriteByte( 1);
           WriteLong(Length(X.ExportName));
-          WriteData( X.ExportName[1], length(X.ExportName));
+          WriteData( X.ExportName[1], length(X.ExportName)*SizeOf(tbtChar));
         end else
           WriteByte( 0);
       end;
@@ -12477,10 +12477,10 @@ var
           WriteLong(0); // offset is unknown at this time
           WriteLong(0); // length is also unknown at this time
           WriteLong(Length(xo.Name));
-          WriteData( xo.Name[1], length(xo.Name));
+          WriteData( xo.Name[1], length(xo.Name)*SizeOf(tbtChar));
           s := MakeExportDecl(xo.Decl);
           WriteLong(Length(s));
-          WriteData( s[1], length(S));
+          WriteData( s[1], length(S)*SizeOf(tbtChar));
         end
         else
         begin
@@ -12491,16 +12491,16 @@ var
             if xe.RegProc.FExportName then
             begin
               WriteByte(Length(xe.RegProc.Name));
-              WriteData(xe.RegProc.Name[1], Length(xe.RegProc.Name) and $FF);
+              WriteData(xe.RegProc.Name[1], (Length(xe.RegProc.Name) and $FF)*SizeOf(tbtChar));
             end else begin
               WriteByte(0);
             end;
             WriteLong(Length(xe.RegProc.ImportDecl));
-            WriteData(xe.RegProc.ImportDecl[1], Length(xe.RegProc.ImportDecl));
+            WriteData(xe.RegProc.ImportDecl[1], Length(xe.RegProc.ImportDecl)*SizeOf(tbtChar));
           end else begin
             WriteByte(att or 1); // imported
             WriteByte(Length(xe.RegProc.Name));
-            WriteData(xe.RegProc.Name[1], Length(xe.RegProc.Name) and $FF);
+            WriteData(xe.RegProc.Name[1], (Length(xe.RegProc.Name) and $FF)*SizeOf(tbtChar));
           end;
         end;
         if xp.Attributes.Count <> 0 then
