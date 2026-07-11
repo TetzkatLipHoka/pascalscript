@@ -2257,7 +2257,8 @@ procedure TPSTypeRec.CalcSize;
 begin
   case BaseType of
     btVariant: FRealSize := sizeof(Variant);
-    btChar, bts8, btU8, btAnsiChar: FrealSize := 1 ;
+    btChar: FRealSize := SizeOf(TbtChar);
+    bts8, btU8, btAnsiChar: FrealSize := 1 ;
     {$IFNDEF PS_NOWIDESTRING}btWideChar, {$ENDIF}bts16, btU16: FrealSize := 2;
     {$IFNDEF PS_NOWIDESTRING}btWideString,
     btUnicodeString,
@@ -4707,7 +4708,14 @@ var
 begin
   try
     case aType.BaseType of
-      btU8, btS8, btChar, btAnsiChar:
+      btChar:
+        for i := 0 to Len -1 do
+        begin
+          tbtChar(Dest^) := tbtChar(Src^);
+          Dest := Pointer(IPointer(Dest) + SizeOf(tbtChar));
+          Src := Pointer(IPointer(Src) + SizeOf(tbtChar));
+        end;
+      btU8, btS8, btAnsiChar:
         for i := 0 to Len -1 do
         begin
           tbtU8(Dest^) := tbtU8(Src^);
