@@ -4383,7 +4383,7 @@ begin
   end;
   case aType.BaseType of
     btString: tbtstring(src^) := val;
-    btChar: if AnsiString(val) <> '' then tbtchar(src^) := AnsiString(val)[1];
+    btChar: if AnsiString(val) <> '' then tbtchar(src^) := tbtchar(AnsiString(val)[1]);
 {$IFNDEF PS_NOWIDESTRING}
     btUnicodeString: tbtunicodestring(src^) := tbtUnicodeString(AnsiString(val));
     btWideString: tbtwidestring(src^) := tbtwidestring(AnsiString(val));
@@ -10921,8 +10921,13 @@ begin
           tvarrec(p^).VVariant := cp;
         end;
         btchar: begin
+            {$if SizeOf(tbtchar)=2}
+            tvarrec(p^).VType := vtWideChar;
+            tvarrec(p^).VWideChar := tbtchar(cp^);
+            {$else}
             tvarrec(p^).VType := vtChar;
-            tvarrec(p^).VChar := tbtChar(tbtchar(cp^));
+            tvarrec(p^).VChar := tbtchar(cp^);
+            {$ifend}
           end;
         btSingle:
           begin
@@ -11073,7 +11078,11 @@ begin
           end;
         btChar: begin
             if v^.VarParam then
-              tbtchar(cp^) := tbtChar(tvarrec(p^).VChar)
+              {$if SizeOf(tbtchar)=2}
+              tbtchar(cp^) := tvarrec(p^).VWideChar
+              {$else}
+              tbtchar(cp^) := tbtchar(tvarrec(p^).VChar)
+              {$ifend}
           end;
         btSingle: begin
           if v^.VarParam then
