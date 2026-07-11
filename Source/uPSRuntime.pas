@@ -1662,9 +1662,9 @@ begin
         Result := MakeWString(variant(p.dta^))
       {$ENDIF}
       else if TVarData(p.Dta^).VType = varString then
-        Result := MakeString(tbtstring(variant(p.Dta^)))
+        Result := MakeString(tbtstring(string(variant(p.Dta^))))
       else
-      Result := tbtstring(Variant(p.Dta^));
+      Result := tbtstring(string(Variant(p.Dta^)));
     except
       on e: Exception do
         Result := tbtstring(Format (RPS_Exception, [e.Message]));
@@ -2070,7 +2070,7 @@ begin
                             Result := string(MakeWString(Variant(V.Dta^)))
                             {$ENDIF}
                           else if (TVarData(V.Dta^).VType = varString) and not NoQuotes then
-                            Result := string(MakeString(tbtstring(Variant(V.Dta^))))
+                            Result := string(MakeString(tbtstring(string(Variant(V.Dta^)))))
                           {$if declared(varUString)}
                           else if (TVarData(V.Dta^).VType = varUString) and not NoQuotes then
                             Result := string(MakeWString(Variant(V.Dta^)))
@@ -4262,7 +4262,7 @@ begin
 {$IFNDEF PS_NOWIDESTRING}
     btUnicodeString: result := tbtString(tbtUnicodestring(src^));
     btWideString: Result := tbtString(tbtwidestring(src^));{$ENDIF}
-    btVariant:  Result := tbtString(Variant(src^));
+    btVariant:  Result := tbtString(string(Variant(src^)));
     else raise Exception.Create(RPS_TypeMismatch);
   end;
 end;
