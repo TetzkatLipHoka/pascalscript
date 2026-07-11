@@ -11353,8 +11353,25 @@ begin
           end;
         {$ENDIF}
         btString: begin
+          {$if SizeOf(tbtChar) = 2}
+          tvarrec(p^).VType := vtUnicodeString;
+          tbtunicodestring(TVarRec(p^).VUnicodeString) := tbtunicodestring(cp^);
+          {$else}
           tvarrec(p^).VType := vtAnsiString;
           tbtString(TVarRec(p^).VAnsiString) := tbtstring(cp^);
+          {$ifend}
+        end;
+        btAnsiString: begin
+          tvarrec(p^).VType := vtAnsiString;
+          tbtAnsiString(TVarRec(p^).VAnsiString) := tbtAnsiString(cp^);
+        end;
+        btAnsiChar: begin
+          tvarrec(p^).VType := vtChar;
+          tvarrec(p^).VChar := AnsiChar(tbtAnsiChar(cp^));
+        end;
+        btPAnsiChar: begin
+          tvarrec(p^).VType := vtPchar;
+          TVarRec(p^).VPChar := pointer(cp^);
         end;
         btPChar:
         begin
@@ -11485,9 +11502,24 @@ begin
           end;
         {$ENDIF}
         btString: begin
+          {$if SizeOf(tbtChar) = 2}
+          if v^.VarParam then
+            tbtstring(cp^) := tbtstring(tbtunicodestring(TVarRec(p^).VUnicodeString));
+          finalize(tbtunicodestring(TVarRec(p^).VUnicodeString));
+          {$else}
           if v^.VarParam then
             tbtstring(cp^) := tbtstring(TVarRec(p^).VString);
           finalize(tbtString(TVarRec(p^).VAnsiString));
+          {$ifend}
+        end;
+        btAnsiString: begin
+          if v^.VarParam then
+            tbtAnsiString(cp^) := tbtAnsiString(TVarRec(p^).VAnsiString);
+          finalize(tbtAnsiString(TVarRec(p^).VAnsiString));
+        end;
+        btAnsiChar: begin
+          if v^.VarParam then
+            tbtAnsiChar(cp^) := tbtAnsiChar(tvarrec(p^).VChar);
         end;
         btClass: begin
           if v^.VarParam then
